@@ -11,39 +11,74 @@ class ItemController extends Controller
     /**
      * Display a listing of the items, with optional filters for section, category, and tags.
      */
+    // public function index(Request $request)
+    // {
+    //     $query = Item::query();
+
     public function index(Request $request)
     {
         $query = Item::query();
 
-        // Filter by section
-        if ($request->has('section')) {
-            $query->where('section', $request->input('section'));
+        // Apply search query if provided
+        if ($request->has('search') && $request->search) {
+            $query->where('title', 'like', '%' . $request->search . '%')
+                ->orWhere('short_summary', 'like', '%' . $request->search . '%');
         }
 
-        // Filter by category
-        if ($request->has('category')) {
+        // Apply section filter
+        if ($request->has('section_id') && $request->section_id) {
+            $query->where('section_id', $request->section_id);
+        }
+
+        // Apply category filter
+        if ($request->has('category_id') && $request->category_id) {
             $query->whereHas('categories', function ($q) use ($request) {
-                $q->where('name', $request->input('category'));
+                $q->where('categories.id', $request->category_id); // Specify table name
             });
         }
 
-        // Filter by tags
-        if ($request->has('tags')) {
-            $tags = explode(',', $request->input('tags'));
-            $query->whereHas('tags', function ($q) use ($tags) {
-                $q->whereIn('name', $tags);
+        // Apply tag filter
+        if ($request->has('tag_id') && $request->tag_id) {
+            $query->whereHas('tags', function ($q) use ($request) {
+                $q->where('tags.id', $request->tag_id); // Specify table name
             });
         }
 
-        // Search by title
-        if ($request->has('search')) {
-            $query->where('title', 'LIKE', '%' . $request->input('search') . '%');
-        }
-
-        $items = $query->paginate(10);
-
-        return response()->json($items);
+        // Return paginated results
+        return response()->json($query->paginate(10));
     }
+
+
+
+    //     // Filter by section
+    //     if ($request->has('section')) {
+    //         $query->where('section', $request->input('section'));
+    //     }
+
+    //     // Filter by category
+    //     if ($request->has('category')) {
+    //         $query->whereHas('categories', function ($q) use ($request) {
+    //             $q->where('name', $request->input('category'));
+    //         });
+    //     }
+
+    //     // Filter by tags
+    //     if ($request->has('tags')) {
+    //         $tags = explode(',', $request->input('tags'));
+    //         $query->whereHas('tags', function ($q) use ($tags) {
+    //             $q->whereIn('name', $tags);
+    //         });
+    //     }
+
+    //     // Search by title
+    //     if ($request->has('search')) {
+    //         $query->where('title', 'LIKE', '%' . $request->input('search') . '%');
+    //     }
+
+    //     $items = $query->paginate(10);
+
+    //     return response()->json($items);
+    // }
 
     public function getItemById($itemId)
     {
