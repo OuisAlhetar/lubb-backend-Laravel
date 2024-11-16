@@ -1,0 +1,66 @@
+version: '3.8'
+services:
+    app:
+        image: php:8.2-fpm
+        container_name: laravel_app
+        working_dir: /var/www/html
+        volumes:
+            - .:/var/www/html
+        networks:
+            - laravel
+        depends_on:
+            - db
+        environment:
+            - APP_ENV=local
+            - APP_DEBUG=true
+            - APP_KEY=${APP_KEY}
+        command: >
+            bash -c "apt-get update && apt-get install -y
+            libzip-dev
+            unzip
+            git
+            libicu-dev &&
+            docker-php-ext-install pdo_mysql zip &&
+            docker-php-ext-configure intl &&
+            docker-php-ext-install intl &&
+            php -r \"copy('https://getcomposer.org/installer', 'composer-setup.php');\" &&
+            php composer-setup.php --install-dir=/usr/local/bin --filename=composer &&
+            php -r \"unlink('composer-setup.php');\" &&
+            composer install &&
+            php-fpm"
+    webserver:
+        image: nginx:alpine
+        container_name: laravel_web
+        restart: unless-stopped
+        ports:
+            - "8000:80"
+        volumes:
+            - .:/var/www/html
+            - ./docker/nginx/conf.d:/etc/nginx/conf.d
+        depends_on:
+            - app
+        networks:
+            - laravel
+
+    db:
+        image: mysql:8.0
+        container_name: laravel_db
+        restart: unless-stopped
+        environment:
+            MYSQL_ROOT_PASSWORD: root_password
+            MYSQL_DATABASE: laravel
+            MYSQL_USER: laravel_user
+            MYSQL_PASSWORD: laravel_password
+        ports:
+            - "3306:3306"
+        volumes:
+            - db_data:/var/lib/mysql
+        networks:
+            - laravel
+
+networks:
+    laravel:
+        driver: bridge
+
+volumes:
+    db_data:
