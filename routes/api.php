@@ -78,7 +78,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/items/{itemId}/unlike', [LikeController::class, 'unlikeItem']);
     Route::post('/items/{itemId}/save', [SaveController::class, 'saveItem']);
     Route::delete('/items/{itemId}/unsave', [SaveController::class, 'unsaveItem']);
-
+    
+    // get if the user like/save the items
+    Route::get('/items/{itemId}/states', [ItemController::class, 'getItemStates']);
+    
     // for handle most_viewed and attach/de-attached tag/category
     Route::post('/items/{itemId}/view', [ItemController::class, 'incrementViewCount']);
 

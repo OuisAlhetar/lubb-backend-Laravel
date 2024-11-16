@@ -168,6 +168,23 @@ class ItemController extends Controller
     }
 
     /**
+     * Get a if authenticated user is saved the current item .
+     */
+
+    public function getItemStates($itemId)
+    {
+        $user = auth()->user(); // Ensure the user is authenticated
+        $liked = $user->likes()->where('item_id', $itemId)->exists();
+        $saved = $user->saves()->where('item_id', $itemId)->exists();
+
+        return response()->json([
+            'liked' => $liked,
+            'saved' => $saved,
+        ]);
+    }
+
+
+    /**
      * Get a list of most viewed items.
      */
     public function getMostViewed()
