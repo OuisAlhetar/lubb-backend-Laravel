@@ -11,6 +11,8 @@ class Section extends Model
 
     protected $fillable = [
         'name',
+        'section_image'
+
     ];
 
     public function items()

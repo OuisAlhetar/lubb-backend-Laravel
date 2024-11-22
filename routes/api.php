@@ -131,17 +131,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 // User Profile Routes
 Route::middleware(['auth:sanctum'])->group(function () {
-    Route::get('/profile', [UserProfileController::class, 'show']);
+    Route::get('/profile', [UserProfileController::class, 'getFullProfile']);
     Route::put('/profile', [UserProfileController::class, 'update']);
-
-    // Show saved and liked items
-    Route::get('/profile/saved-items', [UserProfileController::class, 'showSavedItems']);
-    Route::get('/profile/liked-items', [UserProfileController::class, 'showLikedItems']);
 
     // Unlike and unsave actions
     Route::delete('/profile/saved-items/{itemId}/unsave', [UserProfileController::class, 'unsaveItem']);
     Route::delete('/profile/liked-items/{itemId}/unlike', [UserProfileController::class, 'unlikeItem']);
 });
+
 
 
 // Admin and SuperAdmin Routes with specific middleware for authorization

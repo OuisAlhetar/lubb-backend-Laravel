@@ -11,12 +11,31 @@ use Illuminate\Support\Facades\Auth;
 class UserProfileController extends Controller
 {
     // Show user profile information
-    public function show()
+    // public function show()
+    // {
+    //     $user = Auth::user();
+    //     return response()->json($user, 200);
+    // }
+
+    public function getFullProfile()
     {
         $user = Auth::user();
-        return response()->json($user, 200);
+
+        // Fetch liked items
+        $likedItems = $user->likes()->with('item')->get()->pluck('item');
+
+        // Fetch saved items
+        $savedItems = $user->saves()->with('item')->get()->pluck('item');
+
+        // Return all data in a single response
+        return response()->json([
+            'user' => $user,
+            'liked_items' => $likedItems,
+            'saved_items' => $savedItems
+        ], 200);
     }
 
+    
     // Update user profile information
     public function update(Request $request)
     {
@@ -38,21 +57,21 @@ class UserProfileController extends Controller
         return response()->json(['message' => 'Profile updated successfully'], 200);
     }
 
-    // Show saved items
-    public function showSavedItems()
-    {
-        $user = Auth::user();
-        $savedItems = $user->saves()->with('item')->get()->pluck('item');
-        return response()->json($savedItems, 200);
-    }
+    // // Show saved items
+    // public function showSavedItems()
+    // {
+    //     $user = Auth::user();
+    //     $savedItems = $user->saves()->with('item')->get()->pluck('item');
+    //     return response()->json($savedItems, 200);
+    // }
 
-    // Show liked items
-    public function showLikedItems()
-    {
-        $user = Auth::user();
-        $likedItems = $user->likes()->with('item')->get()->pluck('item');
-        return response()->json($likedItems, 200);
-    }
+    // // Show liked items
+    // public function showLikedItems()
+    // {
+    //     $user = Auth::user();
+    //     $likedItems = $user->likes()->with('item')->get()->pluck('item');
+    //     return response()->json($likedItems, 200);
+    // }
 
     // Unsave an item
     public function unsaveItem($itemId)

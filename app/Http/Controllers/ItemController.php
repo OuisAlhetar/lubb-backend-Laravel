@@ -11,9 +11,6 @@ class ItemController extends Controller
     /**
      * Display a listing of the items, with optional filters for section, category, and tags.
      */
-    // public function index(Request $request)
-    // {
-    //     $query = Item::query();
 
     public function index(Request $request)
     {
@@ -48,37 +45,6 @@ class ItemController extends Controller
         return response()->json($query->paginate(10));
     }
 
-
-
-    //     // Filter by section
-    //     if ($request->has('section')) {
-    //         $query->where('section', $request->input('section'));
-    //     }
-
-    //     // Filter by category
-    //     if ($request->has('category')) {
-    //         $query->whereHas('categories', function ($q) use ($request) {
-    //             $q->where('name', $request->input('category'));
-    //         });
-    //     }
-
-    //     // Filter by tags
-    //     if ($request->has('tags')) {
-    //         $tags = explode(',', $request->input('tags'));
-    //         $query->whereHas('tags', function ($q) use ($tags) {
-    //             $q->whereIn('name', $tags);
-    //         });
-    //     }
-
-    //     // Search by title
-    //     if ($request->has('search')) {
-    //         $query->where('title', 'LIKE', '%' . $request->input('search') . '%');
-    //     }
-
-    //     $items = $query->paginate(10);
-
-    //     return response()->json($items);
-    // }
 
     public function getItemById($itemId)
     {
