@@ -5,76 +5,86 @@ namespace App\Http\Controllers;
 use App\Models\Item;
 use App\Models\MostViewed;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class ItemController extends Controller
 {
     /**
      * Display a listing of the items, with optional filters for section, category, and tags.
      */
-
     public function index(Request $request)
     {
-        $query = Item::query();
+        $cacheKey = 'items_' . md5(json_encode($request->all()));
 
-        // Apply search query if provided
-        if ($request->has('search') && $request->search) {
-            $query->where('title', 'like', '%' . $request->search . '%')
-                ->orWhere('short_summary', 'like', '%' . $request->search . '%');
-        }
+        // Retrieve cached data or execute the query and cache it
+        $items = Cache::remember($cacheKey, now()->addMinutes(10), function () use ($request) {
+            $query = Item::query();
 
-        // Apply section filter
-        if ($request->has('section_id') && $request->section_id) {
-            $query->where('section_id', $request->section_id);
-        }
+            // Apply filters as usual
+            if ($request->has('search') && $request->search) {
+                $query->where('title', 'like', '%' . $request->search . '%')
+                    ->orWhere('short_summary', 'like', '%' . $request->search . '%');
+            }
+            if ($request->has('section_id') && $request->section_id) {
+                $query->where('section_id', $request->section_id);
+            }
+            if ($request->has('category_id') && $request->category_id) {
+                $query->whereHas('categories', function ($q) use ($request) {
+                    $q->where('categories.id', $request->category_id);
+                });
+            }
+            if ($request->has('tag_id') && $request->tag_id) {
+                $query->whereHas('tags', function ($q) use ($request) {
+                    $q->where('tags.id', $request->tag_id);
+                });
+            }
 
-        // Apply category filter
-        if ($request->has('category_id') && $request->category_id) {
-            $query->whereHas('categories', function ($q) use ($request) {
-                $q->where('categories.id', $request->category_id); // Specify table name
-            });
-        }
+            return $query->paginate(10); // Cache the paginated results
+        });
 
-        // Apply tag filter
-        if ($request->has('tag_id') && $request->tag_id) {
-            $query->whereHas('tags', function ($q) use ($request) {
-                $q->where('tags.id', $request->tag_id); // Specify table name
-            });
-        }
-
-        // Return paginated results
-        return response()->json($query->paginate(10));
+        return response()->json($items);
     }
 
 
+
+//    getItemById func with redis cashing:
     public function getItemById($itemId)
     {
-        // Retrieve the item with related section, tags, and categories
-        $item = Item::with(['section', 'tags', 'categories'])->find($itemId);
+        $cacheKey = "item_{$itemId}";
+
+        // Retrieve cached data or query and cache
+        $item = Cache::remember($cacheKey, now()->addHours(1), function () use ($itemId) {
+            $item = Item::with(['section', 'tags', 'categories'])->find($itemId);
+            if (!$item) {
+                return null; // Null will not be cached
+            }
+
+            return [
+                'id' => $item->id,
+                'title' => $item->title,
+                'cover_image' => $item->cover_image,
+                'author_or_guest' => $item->author_or_guest,
+                'narrator' => $item->narrator,
+                'release_year' => $item->release_year,
+                'short_summary' => $item->short_summary,
+                'detailed_summary' => $item->detailed_summary,
+                'section' => $item->section ? $item->section->name : null,
+                'tags' => $item->tags->pluck('name')->toArray(),
+                'categories' => $item->categories->pluck('name')->toArray(),
+                'created_at' => $item->created_at,
+                'updated_at' => $item->updated_at,
+            ];
+        });
 
         if (!$item) {
             return response()->json(['error' => 'Item not found'], 404);
         }
 
-        // Format the data
-        $formattedItem = [
-            'id' => $item->id,
-            'title' => $item->title,
-            'cover_image' => $item->cover_image,
-            'author_or_guest' => $item->author_or_guest,
-            'narrator' => $item->narrator,
-            'release_year' => $item->release_year,
-            'short_summary' => $item->short_summary,
-            'detailed_summary' => $item->detailed_summary,
-            'section' => $item->section ? $item->section->name : null,
-            'tags' => $item->tags->pluck('name')->toArray(),
-            'categories' => $item->categories->pluck('name')->toArray(),
-            'created_at' => $item->created_at,
-            'updated_at' => $item->updated_at,
-        ];
+        // Cache::forget('user_profile_*');
 
-        return response()->json($formattedItem, 200);
+
+        return response()->json($item, 200);
     }
-
 
     /**
      * Store a newly created item in storage.
@@ -85,7 +95,7 @@ class ItemController extends Controller
             'title' => 'required|string|max:255',
             'cover_image' => 'string|nullable',
             'author_or_guest' => 'string|nullable',
-            'release_year' => 'nullable|date:year',
+            'release_year' => 'nullable',
             'narrator' => 'string|nullable',
             'short_summary' => 'required|string|max:200',
             'detailed_summary' => 'required|string',
@@ -101,6 +111,9 @@ class ItemController extends Controller
         if ($request->has('categories')) {
             $item->categories()->attach($request->input('categories'));
         }
+
+        //  clear redis cash
+        Cache::forget('items_*'); // Invalidate all items cache
 
         return response()->json(['message' => 'Item created successfully', 'item' => $item], 201);
     }
@@ -143,8 +156,19 @@ class ItemController extends Controller
             $item->categories()->sync($request->input('categories'));
         }
 
+        Cache::forget("item_{$id}"); // Clear cache for this item
+        Cache::forget('items_*');   // Optionally clear list cache
+        Cache::forget('most_viewed_items'); // Clear most viewed cache
+        Cache::forget('user_profile_*'); // Clear most viewed cache
+
+
+
         return response()->json(['message' => 'Item updated successfully', 'item' => $item]);
     }
+
+
+
+
 
     /**
      * Remove the specified item from storage.
@@ -153,6 +177,10 @@ class ItemController extends Controller
     {
         $item = Item::findOrFail($id);
         $item->delete();
+        Cache::forget("item_{$id}"); // Clear cache for this item
+        Cache::forget('items_*');   // Optionally clear list cache
+        Cache::forget('user_profile_'); // Clear most viewed cache
+
 
         return response()->json(['message' => 'Item deleted successfully']);
     }
@@ -165,6 +193,7 @@ class ItemController extends Controller
         $mostViewed = MostViewed::firstOrCreate(['item_id' => $itemId]);
         $mostViewed->increment('view_count');
 
+        Cache::forget('most_viewed_items'); // Clear most viewed cache
         return response()->json(['message' => 'View count incremented successfully']);
     }
 
@@ -175,46 +204,54 @@ class ItemController extends Controller
     public function getItemStates($itemId)
     {
         $user = auth()->user(); // Ensure the user is authenticated
-        $liked = $user->likes()->where('item_id', $itemId)->exists();
-        $saved = $user->saves()->where('item_id', $itemId)->exists();
+        $cacheKey = "user_{$user->id}_item_{$itemId}_states";
 
-        return response()->json([
-            'liked' => $liked,
-            'saved' => $saved,
-        ]);
+        // Attempt to retrieve states from the cache
+        $itemStates = Cache::remember($cacheKey, now()->addMinutes(15), function () use ($user, $itemId) {
+            $liked = $user->likes()->where('item_id', $itemId)->exists();
+            $saved = $user->saves()->where('item_id', $itemId)->exists();
+
+            return [
+                'liked' => $liked,
+                'saved' => $saved,
+            ];
+        });
+
+        return response()->json($itemStates);
     }
 
 
-    /**
-     * Get a list of most viewed items.
-     */
+//    GetMostViewed Func with Cashing:
     public function getMostViewed()
     {
-        // Get most viewed items along with related models (section, tags, categories)
-        $mostViewedItems = MostViewed::with(['item.section', 'item.tags', 'item.categories'])
-        ->orderBy('view_count', 'desc')
-        ->take(10) // or any other limit
-            ->get()
-            ->map(function ($mostViewedItem) {
-                // Format the response to include section name, tags, and categories
-                return [
-                    'id' => $mostViewedItem->item->id,
-                    'title' => $mostViewedItem->item->title,
-                    'cover_image' => $mostViewedItem->item->cover_image,
-                    'author_or_guest' => $mostViewedItem->item->author_or_guest,
-                    'narrator' => $mostViewedItem->item->narrator,
-                    'release_year' => $mostViewedItem->item->release_year,
-                    'short_summary' => $mostViewedItem->item->short_summary,
-                    'detailed_summary' => $mostViewedItem->item->detailed_summary,
-                    'section' => $mostViewedItem->item->section ? $mostViewedItem->item->section->name : null,
-                    'tags' => $mostViewedItem->item->tags->pluck('name')->toArray(),
-                    'categories' => $mostViewedItem->item->categories->pluck('name')->toArray(),
-                ];
-            });
+        $cacheKey = 'most_viewed_items';
 
-        // Return the formatted response as JSON
+        // Retrieve cached data or query and cache
+        $mostViewedItems = Cache::remember($cacheKey, now()->addMinutes(30), function () {
+            return MostViewed::with(['item.section', 'item.tags', 'item.categories'])
+                ->orderBy('view_count', 'desc')
+                ->take(10)
+                ->get()
+                ->map(function ($mostViewedItem) {
+                    return [
+                        'id' => $mostViewedItem->item->id,
+                        'title' => $mostViewedItem->item->title,
+                        'cover_image' => $mostViewedItem->item->cover_image,
+                        'author_or_guest' => $mostViewedItem->item->author_or_guest,
+                        'narrator' => $mostViewedItem->item->narrator,
+                        'release_year' => $mostViewedItem->item->release_year,
+                        'short_summary' => $mostViewedItem->item->short_summary,
+                        'detailed_summary' => $mostViewedItem->item->detailed_summary,
+                        'section' => $mostViewedItem->item->section ? $mostViewedItem->item->section->name : null,
+                        'tags' => $mostViewedItem->item->tags->pluck('name')->toArray(),
+                        'categories' => $mostViewedItem->item->categories->pluck('name')->toArray(),
+                    ];
+                });
+        });
+
         return response()->json($mostViewedItems);
     }
+
 
 
 
@@ -225,6 +262,7 @@ class ItemController extends Controller
     {
         MostViewed::where('item_id', $itemId)->delete();
 
+        // todo: besure forget the cash when edit here
         return response()->json(['message' => 'Item removed from most viewed list']);
     }
 

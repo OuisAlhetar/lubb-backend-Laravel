@@ -19,7 +19,8 @@ class User extends Authenticatable
         'email',
         'password',
         'is_admin',
-        'is_super_admin'
+        'is_super_admin',
+        'google_id',
     ];
 
     protected $hidden = [
@@ -71,7 +72,3 @@ class User extends Authenticatable
 
 
 }
-//     public function getFilamentUserName(): string
-//     {
-//         return $this->name ?? ' Default User';
-//     }

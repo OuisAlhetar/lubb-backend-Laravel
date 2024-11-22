@@ -10,6 +10,7 @@ use App\Http\Controllers\TagController;
 use App\Http\Controllers\SectionController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\SaveController;
 use App\Http\Controllers\SuperAdminController;
@@ -31,6 +32,8 @@ use App\Http\Controllers\UserProfileController;
 // Route::get('/items/most-viewed', [ItemController::class, 'getMostViewed']);
 
 
+
+
 // #################### Authentication #########################
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
@@ -42,15 +45,22 @@ Route::prefix('auth')->group(function () {
     });
 });
 
+// public routes:
 Route::get('/items/most-viewed', [ItemController::class, 'getMostViewed']);
 Route::get('/items/{itemId}', [ItemController::class, 'getItemById']);
+Route::get('/tags', [TagController::class, 'index']);
+Route::get('/tags/{id}', [TagController::class, 'show']);
+Route::get('/sections', [SectionController::class, 'index']);
+Route::get('/sections/{id}', [SectionController::class, 'show']);
+Route::get('/categories', [CategoryController::class, 'index']);
+Route::get('/categories/{id}', [CategoryController::class, 'show']);
 
 
 // #################### Item Endpoint #########################
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/items', [ItemController::class, 'index']); // List all items
     Route::post('/items', [ItemController::class, 'store']); // Create a new item
-    
+
     /*//! very important Note
         The issue here is due to how route matching works in Laravel. When you define two routes with the same HTTP verb (`GET`) and similar patterns (`/items/most-viewed` and `/items/{id}`), Laravel evaluates them in the order they are declared. If you declare `/items/{id}` before `/items/most-viewed`, Laravel tries to match `/items/most-viewed` to the `/{id}` parameter, interpreting `most-viewed` as an `id`, leading to a `404 not found` error when `most-viewed` isn’t found as a valid `id`.
 
@@ -66,8 +76,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         ### Final Advice
 
         Always place routes with static segments (like `most-viewed`) before dynamic segments (like `{id}`) to prevent unexpected route conflicts.
-    */ 
-    
+    */
+
     // Route::get('/items/most-viewed', [ItemController::class, 'getMostViewed']);
     Route::get('/items/{id}', [ItemController::class, 'show']); // Get a specific item
     Route::put('/items/{id}', [ItemController::class, 'update']); // Update an item
@@ -78,10 +88,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/items/{itemId}/unlike', [LikeController::class, 'unlikeItem']);
     Route::post('/items/{itemId}/save', [SaveController::class, 'saveItem']);
     Route::delete('/items/{itemId}/unsave', [SaveController::class, 'unsaveItem']);
-    
+
     // get if the user like/save the items
     Route::get('/items/{itemId}/states', [ItemController::class, 'getItemStates']);
-    
+
     // for handle most_viewed and attach/de-attached tag/category
     Route::post('/items/{itemId}/view', [ItemController::class, 'incrementViewCount']);
 
@@ -104,23 +114,17 @@ Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
 
 Route::middleware(['auth:sanctum'])->group(function () {
     // Tag Routes
-    Route::get('/tags', [TagController::class, 'index']);
     Route::post('/tags', [TagController::class, 'store']);
-    Route::get('/tags/{id}', [TagController::class, 'show']);
     Route::put('/tags/{id}', [TagController::class, 'update']);
     Route::delete('/tags/{id}', [TagController::class, 'destroy']);
 
     // Section Routes
-    Route::get('/sections', [SectionController::class, 'index']);
     Route::post('/sections', [SectionController::class, 'store']);
-    Route::get('/sections/{id}', [SectionController::class, 'show']);
     Route::put('/sections/{id}', [SectionController::class, 'update']);
     Route::delete('/sections/{id}', [SectionController::class, 'destroy']);
 
     // Category Routes
-    Route::get('/categories', [CategoryController::class, 'index']);
     Route::post('/categories', [CategoryController::class, 'store']);
-    Route::get('/categories/{id}', [CategoryController::class, 'show']);
     Route::put('/categories/{id}', [CategoryController::class, 'update']);
     Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
 
@@ -138,6 +142,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/profile/saved-items/{itemId}/unsave', [UserProfileController::class, 'unsaveItem']);
     Route::delete('/profile/liked-items/{itemId}/unlike', [UserProfileController::class, 'unlikeItem']);
 });
+
 
 
 
