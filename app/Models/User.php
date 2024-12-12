@@ -15,7 +15,7 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
     protected $fillable = [
-        'username',
+        'name',
         'email',
         'password',
         'is_admin',
@@ -49,22 +49,17 @@ class User extends Authenticatable
         return $this->is_super_admin;
     }
 
-    public function getFilamentUserNameAttribute(): string
-    {
-        return $this->username ?? 'Default User';
-    }
-
 
     public static function boot()
     {
         parent::boot();
 
         static::creating(function ($user) {
-            if (empty($user->username)) {
+            if (empty($user->name)) {
                 // Generate a unique username if not provided
-                $user->username = 'user_' . Str::random(8);
-                while (User::where('username', $user->username)->exists()) {
-                    $user->username = 'user_' . Str::random(8); // Retry if not unique
+                $user->name = 'user_' . Str::random(8);
+                while (User::where('name', $user->name)->exists()) {
+                    $user->name = 'user_' . Str::random(8); // Retry if not unique
                 }
             }
         });

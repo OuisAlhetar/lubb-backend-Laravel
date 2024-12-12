@@ -6,18 +6,18 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up()
-    {
-        Schema::table('users', function (Blueprint $table) {
-            $table->string('username')->default('default_username')->change();
-        });
-    }
+    // public function up()
+    // {
+    //     Schema::table('users', function (Blueprint $table) {
+    //         $table->string('username')->default('default_username')->change();
+    //     });
+    // }
 
-    public function down()
-    {
-        Schema::table('users', function (Blueprint $table) {
-            $table->string('username')->default(null)->change();
-        });
-    }
+    // public function down()
+    // {
+    //     Schema::table('users', function (Blueprint $table) {
+    //         $table->string('username')->default(null)->change();
+    //     });
+    // }
 
 };

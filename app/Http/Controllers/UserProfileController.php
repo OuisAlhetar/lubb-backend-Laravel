@@ -44,12 +44,12 @@ class UserProfileController extends Controller
         $user = Auth::user();
 
         $request->validate([
-            'username' => 'string|max:255',
+            'name' => 'string|max:255',
             'email' => 'string|email|max:255|unique:users,email,' . $user->id,
             'password' => 'string|min:8|confirmed'
         ]);
 
-        $user->username = $request->username ?? $user->username;
+        $user->name = $request->name ?? $user->name;
         $user->email = $request->email ?? $user->email;
         if ($request->password) {
             $user->password = bcrypt($request->password);

@@ -22,7 +22,7 @@ class RegisteredUserController extends Controller
     public function store(Request $request): Response
     {
         $request->validate([
-            'username' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:' . User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
@@ -30,7 +30,7 @@ class RegisteredUserController extends Controller
         $verification_code = rand(100000, 999999);  // Generate the verification code
 
         $user = User::create([
-            'username' => $request->name,
+            'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => ['required', 'string', 'exists:roles,name'], // Validate that role exists in the roles table

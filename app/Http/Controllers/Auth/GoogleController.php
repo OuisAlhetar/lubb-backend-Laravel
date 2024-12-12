@@ -24,7 +24,8 @@ class GoogleController extends Controller
             ['google_id' => $user->id],
             [
                 'email' => $user->email,
-                'username' => $user->name ?? 'user_' . Str::random(8),
+                'name' => $user->name ?? 'user_' . Str::random(8),
+                'password'=> Hash::make("password"),
             ]
         );
 
@@ -32,7 +33,7 @@ class GoogleController extends Controller
         $token = $authUser->createToken('auth_token')->plainTextToken;
 
         // Redirect to the frontend app with token and username
-        return redirect()->to("http://localhost:5173/?token={$token}&username={$authUser->username}");
+        return redirect()->to("http://localhost:5173/?token={$token}&username={$authUser->name}");
     }
 
 
